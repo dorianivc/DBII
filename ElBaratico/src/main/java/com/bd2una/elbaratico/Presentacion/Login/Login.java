@@ -99,7 +99,7 @@ public class Login extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void LoginBottonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LoginBottonActionPerformed
-        DBconnection db = new DBconnection();
+        DBconnection db = DBconnection.getInstance();
         String pass= String.copyValueOf(Password.getPassword());
         if(db.LogIn(user.getText(), pass)){
                     JOptionPane.showMessageDialog(null, "Bienvenido "+ user.getText(), "Logeo", JOptionPane.PLAIN_MESSAGE, null);      

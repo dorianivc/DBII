@@ -17,12 +17,41 @@ import java.util.logging.Logger;
  * 
  */
 public class DBconnection {
-    
-   public DBconnection(){
+   
+   private DBconnection(){
        System.out.println("Starting DB Connection");
    } 
    
-   public Boolean LogIn(String user, String password){
+   private String username;
+   private String password;
+   
+   
+   private static DBconnection instance = null;
+   
+   public static DBconnection getInstance () {
+       if(instance == null){
+           instance = new DBconnection();
+       }
+       return instance;
+   }
+
+   public Boolean ExecuteQuery(String query){
+       try(Connection conn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:xe",username, password);
+         Statement stmt = conn.createStatement();
+      ) {		      
+         // Execute a query
+         System.out.println("Running query");          
+         String sql = query;
+         stmt.executeUpdate(sql);
+         System.out.println("Query ran successfuly");   	  
+      } catch (SQLException e) {
+         System.out.println(e.getMessage());
+         return false;
+      } 
+      return true;
+   }
+   
+   public Boolean LogIn(String user, String pass){
        try{  
 //step1 load the driver class  
 Class.forName("oracle.jdbc.driver.OracleDriver");  
@@ -30,12 +59,14 @@ Class.forName("oracle.jdbc.driver.OracleDriver");
 //step3 create the statement object
             try (//step2 create  the connection object
                     Connection con = DriverManager.getConnection(  
-                            "jdbc:oracle:thin:@localhost:1521:xe",user,password)) {
+                            "jdbc:oracle:thin:@localhost:1521:xe",user,pass)) {
                 if (con==null){
                     System.out.println("No conectado");
                     return false;
                 }else{
                     System.out.println("Conectado");
+                    this.username = user;
+                    this.password = pass;
                     return true;
                 }
             } catch (SQLException ex) {  
