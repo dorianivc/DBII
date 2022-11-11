@@ -46,32 +46,36 @@ public class DAO {
     }
 
 
+
     public boolean POSTUsuario(records.Usuario usuario){
         connect();
         //sql statement for inserting record
         //delete, update, insert
-        String sql = "INSERT INTO usuarios (USUARIOSID, NOMBREUSUARIO, CONTRASENIA, ROL) VALUES (?, ?,?,?)";
+        //(NOMB in varchar, CONTRA in varchar, Rl in number, idUsuario out number)
+        String command = "{call SYSTEM.proc_insert_usuarios(?,?,?,?)}";
         try {
-            PreparedStatement statement = connection.prepareStatement(sql);
-            //setting parameter values
-            statement.setString(1, usuario.USUARIOSID());
-            statement.setString(2, usuario.NOMBREUSUARIO());
-            statement.setString(3, usuario.CONTRASENIA());
-            statement.setString(4, usuario.ROL());
-            //executing query which will return an integer value
-            int rowsInserted = statement.executeUpdate();
-            //if rowInserted is greater then 0 mean rows are inserted
-            if (rowsInserted > 0) {
+            CallableStatement cstmt = connection.prepareCall(command);
+
+            cstmt.setString(1, usuario.NOMBREUSUARIO());     //orderId integer value to be set as input parameter
+            cstmt.setString(2, usuario.CONTRASENIA());     //orderId integer value to be set as input parameter
+            cstmt.setInt(3, Integer.parseInt(usuario.ROL()));     //orderId integer value to be set as input parameter
+            cstmt.registerOutParameter(4, Types.INTEGER);
+            cstmt.execute();
+            float result = cstmt.getInt(4);
+            cstmt.close();
+
+            if (result != -1) {
                 logger.debug("A new user was inserted successfully!");
                 return true;
+            }else{
+                logger.error("Exception in connection: Agregar usuario");
+                return false;
             }
         }catch (Exception e){
             logger.error("Exception in connection: "+ e.toString());
             return false;
         }
 
-        closeConnection();
-        return false;
     }
 
     public ArrayList<records.Usuario> GETUsuarios(){
