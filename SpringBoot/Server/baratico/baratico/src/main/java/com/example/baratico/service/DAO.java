@@ -11,9 +11,22 @@ import java.sql.*;
 import java.util.ArrayList;
 
 public class DAO {
+
+
     final String URL = "jdbc:oracle:thin:@localhost:1521:xe";
-    final String USER = "system";
-    final String PASSWORD = "system";
+    String USER = "system";
+    String PASSWORD = "system";
+
+
+    public DAO(records.Usuario usuario) {
+        this.USER = usuario.NOMBREUSUARIO();
+        this.PASSWORD = usuario.CONTRASENIA();
+    }
+
+    public DAO(String USER, String PASSWORD) {
+        this.USER = USER;
+        this.PASSWORD = PASSWORD;
+    }
 
     Connection connection;
 
@@ -47,13 +60,13 @@ public class DAO {
 
 
     public int POSTUsuario(records.Usuario usuario){
-        connect();
         //sql statement for inserting record
         //delete, update, insert
         //(NOMB in varchar, CONTRA in varchar, Rl in number, idUsuario out number)
         String command = "{call SYSTEM.proc_insert_usuarios(?,?,?,?)}";
         int result = -1;
         try {
+            connect();
             CallableStatement cstmt = connection.prepareCall(command);
 
             cstmt.setString(1, usuario.NOMBREUSUARIO());     //orderId integer value to be set as input parameter
@@ -74,18 +87,18 @@ public class DAO {
             }
         }catch (Exception e){
             logger.error("Exception in connection: "+ e.toString());
-            return result;
+            return -1;
         }
 
     }
 
     public ArrayList<records.Usuario> GETUsuarios(){
-        connect();
         //sql statement for inserting record
-        String sql = "select * from rep_usuarios";
+        String sql = "select * from system.rep_usuarios";
         //Creating a collection form employee list for storing all employee record
         ArrayList<records.Usuario> employeeList=new ArrayList<records.Usuario>();
         try {
+            connect();
             //creating and executing our statement
             Statement statement = connection.createStatement();
             ResultSet result = statement.executeQuery(sql);
@@ -114,12 +127,12 @@ public class DAO {
     }
 
     public records.Usuario PUTUsuarios(records.Usuario usuario){
-        connect();
         //proc_update_usuarios(idu in number ,nombre in varchar, contra in varchar, rl in number, response out number)
         String command = "{call SYSTEM.proc_update_usuarios(?,?,?,?,?)}";
         int result;
 
         try {
+            connect();
             CallableStatement cstmt = connection.prepareCall(command);
 
             cstmt.setInt(1, Integer.parseInt(usuario.USUARIOSID()));     //orderId integer value to be set as input parameter
@@ -141,13 +154,13 @@ public class DAO {
     }
 
     public boolean DELETEUsuario(records.Usuario usuario){
-        connect();
         //sql statement for inserting record
         //proc_delete_usuarios(idu in number, response out number)
         String command = "{call SYSTEM.proc_delete_usuarios(?,?)}";
         int result;
 
         try {
+            connect();
             CallableStatement cstmt = connection.prepareCall(command);
 
             cstmt.setInt(1, Integer.parseInt(usuario.USUARIOSID()));     //orderId integer value to be set as input parameter
@@ -169,9 +182,9 @@ public class DAO {
 
     public records.Usuario login(records.Usuario usuario){
         //usuario in varchar, passwrd in varchar, response out number
-        connect();
         try{
-            String command = "{call SYSTEM.proc_login(?,?,?)}";
+            connect();
+            String command = "{call system.proc_login(?,?,?)}";
             int result = -1;
 
             CallableStatement cstmt = connection.prepareCall(command);
@@ -181,6 +194,7 @@ public class DAO {
             cstmt.registerOutParameter(3, Types.INTEGER);
             cstmt.execute();
             result = cstmt.getInt(3);
+            System.out.println(result);
             cstmt.close();
 
             closeConnection();
@@ -193,11 +207,10 @@ public class DAO {
             }
 
 
-        }catch (NullPointerException e){
+        }catch (NullPointerException | SQLException e){
             System.out.println(e);
+            closeConnection();
             return new records.Usuario("-1", "", "", "" );
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
     }
 
