@@ -18,7 +18,7 @@ public class ControllerUsuario {
     }
 
     @PostMapping
-    public boolean POSTUsuario(@RequestBody records.Usuario usuario){
+    public int POSTUsuario(@RequestBody records.Usuario usuario){
         return dao.POSTUsuario(usuario);
     }
 

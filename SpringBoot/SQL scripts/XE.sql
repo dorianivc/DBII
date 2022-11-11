@@ -12,7 +12,7 @@ drop table Bitacora;
 
 
 
-
+drop view rep_usuarios;
 
 drop trigger usuarios_trg_axr;
 drop trigger Area_trg_axr;
@@ -335,7 +335,9 @@ grant DBA to EncargadoSistemas;
     
     
 
--- Procedures & Functions Tabla Usuarios
+-- Procedures, Functions & view de Tabla Usuarios
+
+-- PUTusuatio
 create or replace procedure proc_insert_usuarios(NOMB in varchar, CONTRA in varchar, Rl in number, idUsuario out number) as
 begin
   INSERT INTO usuarios(USUARIOSID, NOMBREUSUARIO, CONTRASENIA, ROL) VALUES (sec_usuarios.nextval, NOMB, CONTRA, Rl);
@@ -347,7 +349,46 @@ end proc_insert_usuarios;
 /
 
 
-exec proc_insert_usuarios('Norman', '124', 1, nu);
 
+--Login
+create or replace procedure proc_login(usuario in varchar, passwrd in varchar, response out number ) as
+begin
+    select count(*) into response
+    from usuarios 
+    where NombreUsuario = usuario and Contrasenia = passwrd;  
+exception
+  when others then
+    response := 0;
+end proc_login;
+
+-- GETusuario
+create or replace view rep_usuarios as
 select * from usuarios;
+
+/*
+    UsuariosID number,
+    NombreUsuario varchar(150),
+    Contrasenia varchar(150),
+    Rol number, 
+*/
+
+-- PUTusuario
+create or replace procedure proc_update_usuarios(idu in number ,nombre in varchar, contra in varchar, rl in number, response out number) as
+begin
+    update usuarios set NOMBREUSUARIO = nombre, CONTRASENIA=contra, ROL= rl where USUARIOSID = idu;
+    response := 1;
+exception
+  when others then
+    response := -1;
+end proc_update_usuarios;
+
+-- DELETEusuario
+create or replace procedure proc_delete_usuarios(idu in number, response out number) as
+begin
+    delete from usuarios where usuariosid = idu;
+    response := 1;
+exception
+  when others then
+    response := -1;        
+end proc_delete_usuarios;
 
