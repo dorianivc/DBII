@@ -118,6 +118,8 @@ create Table Bitacora(
     Tabla varchar(100)
 );
 
+select * from bitacora;
+
 
 
 create Table BitacoraCajero(
@@ -353,12 +355,12 @@ end proc_insert_usuarios;
 --Login
 create or replace procedure proc_login(usuario in varchar, passwrd in varchar, response out number ) as
 begin
-    select count(*) into response
+    select USUARIOSID into response
     from usuarios 
     where NombreUsuario = usuario and Contrasenia = passwrd;  
 exception
   when others then
-    response := 0;
+    response := -1;
 end proc_login;
 
 -- GETusuario

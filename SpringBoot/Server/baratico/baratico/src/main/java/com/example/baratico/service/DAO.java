@@ -17,7 +17,6 @@ public class DAO {
 
     Connection connection;
 
-    //logger object for saving logs
     private static final Logger logger = LogManager.getLogger();
 
     public void connect(){
@@ -108,10 +107,13 @@ public class DAO {
     public records.Usuario GETUsuario(records.Usuario usuario){
         ArrayList<records.Usuario> result = GETUsuarios();
         //filtra el primer usuario con x ID (FP)
-        return result.stream().filter(x -> x.USUARIOSID().equals(usuario.USUARIOSID()) ).findFirst().orElse(null);
+        return result.stream()
+                .filter(x -> x.USUARIOSID().equals(usuario.USUARIOSID()) )
+                .findFirst()
+                .orElse( new records.Usuario("", "", "", ""));
     }
 
-    public boolean PUTUsuarios(records.Usuario usuario){
+    public records.Usuario PUTUsuarios(records.Usuario usuario){
         connect();
         //proc_update_usuarios(idu in number ,nombre in varchar, contra in varchar, rl in number, response out number)
         String command = "{call SYSTEM.proc_update_usuarios(?,?,?,?,?)}";
@@ -130,10 +132,10 @@ public class DAO {
             cstmt.close();
 
             closeConnection();
-            return result == 1;
+            return this.GETUsuario(usuario);
         }catch (Exception e){
             logger.error("Exception in connection: "+ e.toString());
-            return false;
+            return new records.Usuario("-1","","","");
 
         }
     }
@@ -165,12 +167,12 @@ public class DAO {
     }
 
 
-    public boolean login(records.Usuario usuario){
+    public records.Usuario login(records.Usuario usuario){
         //usuario in varchar, passwrd in varchar, response out number
         connect();
         try{
             String command = "{call SYSTEM.proc_login(?,?,?)}";
-            int result = 0;
+            int result = -1;
 
             CallableStatement cstmt = connection.prepareCall(command);
 
@@ -182,18 +184,18 @@ public class DAO {
             cstmt.close();
 
             closeConnection();
-            if (result != 0) {
+            if (result != -1) {
                 logger.debug("user n pwd correct");
-                return true;
+                return this.GETUsuario(new records.Usuario(String.valueOf(result), "", "",""));
             }else{
                 logger.error("Exception in connection: no se encontró");
-                return false;
+                return new records.Usuario("-1", "", "", "" );
             }
 
 
         }catch (NullPointerException e){
             System.out.println(e);
-            return false;
+            return new records.Usuario("-1", "", "", "" );
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

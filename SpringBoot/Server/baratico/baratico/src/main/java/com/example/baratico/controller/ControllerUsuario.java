@@ -13,7 +13,7 @@ public class ControllerUsuario {
     DAO dao = new DAO();
 
     @PostMapping("/login")
-    public boolean login(@RequestBody records.Usuario person){
+    public records.Usuario login(@RequestBody records.Usuario person){
         return dao.login(person);
     }
 
@@ -33,7 +33,7 @@ public class ControllerUsuario {
     }
 
     @PutMapping
-    public boolean PUTUsuario(@RequestBody records.Usuario usuario){
+    public records.Usuario PUTUsuario(@RequestBody records.Usuario usuario){
         return dao.PUTUsuarios(usuario);
     }
 
