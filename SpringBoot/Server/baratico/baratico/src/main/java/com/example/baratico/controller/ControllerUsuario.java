@@ -12,6 +12,8 @@ public class ControllerUsuario {
 
     DAO dao;
 
+    records.Usuario System = new records.Usuario("system", "system", "system", "");
+
     @PostMapping("/login")
     public records.Usuario login(@RequestBody records.Usuario person){
         dao = new DAO(person);
@@ -21,32 +23,32 @@ public class ControllerUsuario {
 
     @PostMapping
     public int POSTUsuario(@RequestBody records.Usuario usuario){
-        dao = new DAO("system", "system");
+        dao = new DAO(System);
         return dao.POSTUsuario(usuario);
     }
 
     @GetMapping
     public ArrayList<records.Usuario> GETUsuarios(){
-        dao = new DAO("system", "system");
+        dao = new DAO(System);
         return dao.GETUsuarios();
     }
 
     @GetMapping("/{id}")
     public records.Usuario GETUsuario(@PathVariable("id") String id){
-        dao = new DAO("system", "system");
+        dao = new DAO(System);
         return dao.GETUsuario(new records.Usuario(id, "", "", ""));
     }
 
     @PutMapping
     public records.Usuario PUTUsuario(@RequestBody records.Usuario usuario){
-        dao = new DAO("system", "system");
+        dao = new DAO(System);
         return dao.PUTUsuarios(usuario);
     }
 
 
     @DeleteMapping("/{id}")
     public boolean DELETEUsuario(@PathVariable("id") String id){
-        dao = new DAO("system", "system");
+        dao = new DAO(System);
         return dao.DELETEUsuario(new records.Usuario(id, "", "", ""));
     }
 
