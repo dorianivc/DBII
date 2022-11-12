@@ -11,23 +11,39 @@ drop table BitacoraCajero;
 drop table Bitacora;
 
 
-drop view rep_usuarios;
-
-drop trigger usuarios_trg_axr;
-drop trigger Area_trg_axr;
-drop trigger Factura_trg_axr;
-drop trigger Detalle_trg_axr;
-drop trigger Producto_trg_axr;
-drop trigger Inventario_trg_axr;
-
 
 -- TODOOOOOOOOOOOOOOOOOOOOOOO
 drop sequence sec_usuarios;
--- Secuencias
--- Ver el último valor utilizado
--- user_sequence.currval
+drop sequence sec_bitacora;
+drop sequence sec_bitacora_cajero;
+drop sequence sec_bitacora_factura;
+
+DROP USER Cajero1;
+DROP USER Cajero2;
+DROP USER Cajero3;
+DROP USER GerenteAbarrottes;
+DROP USER GerenteCuidado;
+DROP USER GerenteMercancias;
+DROP USER GerenteFrescos;
+DROP USER GerenteGeneral_1;
+DROP USER GerenteGeneral_2;
+DROP USER AdminSistemas;
+
+drop role Cajero;
+drop role GerenteArea;
+drop role GerenteGeneral;
+drop role EncargadoSistemas;
+
+
+
+
+
+
+create sequence sec_bitacora start with 1;
+create sequence sec_bitacora_cajero start with 1;
+create sequence sec_bitacora_factura start with 1;
 create sequence sec_usuarios start with 1;
--- insert into empleados(id, nombre, salario) values (sec_usuarios.nextval, 'Ana', 1500);
+
 
 
 --Manejamos los roles como un int
@@ -85,8 +101,8 @@ create table Factura (
 
 
 create  table Producto(
-    EAN number,
-    PLU number,
+    EAN number, --id (13 caracteres)
+    PLU number, --id (5 digitos) para frescos
     Cantidad decimal(2,0),
     Descripcion varchar(150),
     Precio decimal(2,0),
@@ -111,38 +127,45 @@ create table Detalle(
 
 
 create table Inventario (
+    InventarioId number,
     AreaID number,
     ProductoID number,
     Cantidad decimal(2,0),
     foreign key (AreaID)
     references Area(AreaID),
     foreign key (ProductoID)
-    references Producto(EAN)
+    references Producto(EAN), 
+    primary key(InventarioID)
 );
 --TODO: validar si no es un mercancia, no permite decimal
 
 ---------------------------------------------------------------------------
 --Bitacoras
 
+
+
 create Table Bitacora(
+    BitacoraId number,
     Operacion varchar(20),
     Usuario varchar(100), 
     Fecha TIMESTAMP,
-    Tabla varchar(100)
+    Tabla varchar(100),
+    primary key(BitacoraId)
 );
 
 
-
-
 create Table BitacoraCajero(
+  BitacoraCajeroId number,
   Usuario varchar(100),
   NumeroCaja number,
   NumeroFactura number, 
   MontoTotal decimal(2, 0),
-  fecha TIMESTAMP
+  fecha TIMESTAMP,
+  primary key(BitacoraCajeroId)
 );
 
 create Table BitacoraFactura(
+    BitacoraFacturaId number,
     FacturaID number,
     ProductoID number,
     Cantidad decimal(2,0),
@@ -150,166 +173,10 @@ create Table BitacoraFactura(
     Total decimal(2,0),
     CajeroID number,
     CajaID number,
-    Fecha timestamp
+    Fecha timestamp,
+    primary key(BitacoraFacturaId)
 );
 
-select * from Bitacora;
-
---After insert porque primero crea la factura
---luego inserta el detalle, luego calcula el total
---y luego actualiza el total en la factura
-CREATE or replace TRIGGER factura_trg_air AFTER INSERT
-  ON Factura FOR EACH ROW
-BEGIN
-
---Insert cuando hago agrego un producto a una factura
-INSERT INTO BitacoraFactura(FacturaID,ProductoID,Cantidad,Subtotal,Total,CajeroID,CajaID,Fecha) SELECT F.FacturaID,
-        D.ProductoID,
-        D.Cantidad,
-        D.Subtotal,
-        F.Total,
-        F.CajeroID,
-        F.NumeroCaja,
-        CAST(F.Fecha AS TIMESTAMP)
-    from Factura F
-    inner join Detalle D
-        on D.FacturaID = F.FacturaID
-    Where F.FacturaID = :new.FacturaID;
-
---Insert del cajero que ingreso el dato en la factura
-INSERT INTO BitacoraCajero(Usuario,NumeroCaja,NumeroFactura,MontoTotal,fecha)
-    SELECT (SELECT USER FROM dual),
-        NumeroCaja,
-        FacturaID,
-        Total,
-        CAST(Fecha AS TIMESTAMP)
-    from Factura
-    Where FacturaID = :new.FacturaID;
-
-END;
-
----------------------------------------------------------------------------
--- Triggers Maestros
-
-
--- trigger Usuarios
-CREATE or replace TRIGGER usuarios_trg_axr AFTER INSERT OR DELETE OR UPDATE  ON Usuarios FOR EACH ROW
-DECLARE
-userName varchar(100);
-BEGIN
-  select user into userName from dual;
-  IF INSERTING THEN
-    insert into Bitacora 
-    values ('Insert', userName, sysdate, 'Usuarios');
-  ELSIF DELETING THEN
-    insert into Bitacora 
-    values ('Delete', userName, sysdate, 'Usuarios');
-  ELSIF UPDATING THEN
-    insert into Bitacora 
-    values ('Update', userName, sysdate, 'Usuarios');
-  END IF;
-END;
-
-
--- trigger Area
-CREATE or replace TRIGGER Area_trg_axr AFTER INSERT OR DELETE OR UPDATE
-  ON Area FOR EACH ROW
-DECLARE
-userName varchar(100);
-BEGIN
-  select user into userName from dual;
-  IF INSERTING THEN
-    insert into Bitacora 
-    values ('Insert', userName, sysdate, 'Area');
-  ELSIF DELETING THEN
-    insert into Bitacora 
-    values ('Delete', userName, sysdate, 'Area');
-  ELSIF UPDATING THEN
-    insert into Bitacora 
-    values ('Update', userName, sysdate, 'Area');
-  END IF;
-END;
-
-
---trigger Factura
-CREATE or replace TRIGGER Factura_trg_axr AFTER INSERT OR DELETE OR UPDATE
-  ON Factura FOR EACH ROW
-DECLARE
-userName varchar(100);
-BEGIN
-  select user into userName from dual;
-  IF INSERTING THEN
-    insert into Bitacora 
-    values ('Insert', userName, sysdate, 'Factura');
-  ELSIF DELETING THEN
-    insert into Bitacora 
-    values ('Delete', userName, sysdate, 'Factura');
-  ELSIF UPDATING THEN
-    insert into Bitacora 
-    values ('Update', userName, sysdate, 'Factura');
-  END IF;
-END;
-
-
---trigger Detalle 
-CREATE or replace TRIGGER Detalle_trg_axr AFTER INSERT OR DELETE OR UPDATE
-  ON Detalle FOR EACH ROW
-DECLARE
-userName varchar(100);
-BEGIN
-  select user into userName from dual;
-  IF INSERTING THEN
-    insert into Bitacora 
-    values ('Insert', userName, sysdate, 'Detalle');
-  ELSIF DELETING THEN
-    insert into Bitacora 
-    values ('Delete', userName, sysdate, 'Detalle');
-  ELSIF UPDATING THEN
-    insert into Bitacora 
-    values ('Update', userName, sysdate, 'Detalle');
-  END IF;
-END;
-
-
---trigger Producto  
-CREATE or replace TRIGGER Producto_trg_axr AFTER INSERT OR DELETE OR UPDATE
-  ON Producto FOR EACH ROW
-DECLARE
-userName varchar(100);
-BEGIN
-  select user into userName from dual;
-  IF INSERTING THEN
-    insert into Bitacora 
-    values ('Insert', userName, sysdate, 'Producto');
-  ELSIF DELETING THEN
-    insert into Bitacora 
-    values ('Delete', userName, sysdate, 'Producto');
-  ELSIF UPDATING THEN
-    insert into Bitacora 
-    values ('Update', userName, sysdate, 'Producto');
-  END IF;
-END;
-
-
-
---trigger Inventario  
-CREATE or replace TRIGGER Inventario_trg_axr AFTER INSERT OR DELETE OR UPDATE
-  ON Inventario FOR EACH ROW
-DECLARE
-userName varchar(100);
-BEGIN
-  select user into userName from dual;
-  IF INSERTING THEN
-    insert into Bitacora 
-    values ('Insert', userName, sysdate, 'Inventario');
-  ELSIF DELETING THEN
-    insert into Bitacora 
-    values ('Delete', userName, sysdate, 'Inventario');
-  ELSIF UPDATING THEN
-    insert into Bitacora 
-    values ('Update', userName, sysdate, 'Inventario');
-  END IF;
-END;
 
 
 ---------------------------------------------------------------------------
@@ -317,11 +184,11 @@ END;
 --roles
 -- ROL CAJERO
 -- Solo pueden realizar ventas y consultar precios de productos
+
+
+
 create role Cajero;
 grant select on Producto to Cajero;
-grant select on rep_usuarios to Cajero;
-GRANT ALL ON proc_login TO Cajero;
-
 
 CREATE USER Cajero1 IDENTIFIED BY Cajero;
 CREATE USER Cajero2 IDENTIFIED BY Cajero;
@@ -352,8 +219,7 @@ create role GerenteArea;
 grant update(Descripcion) on Producto to GerenteArea;
 grant update(Cantidad) on Producto to GerenteArea;
 grant select on Producto to GerenteArea;
-grant select on rep_usuarios to GerenteArea;
-GRANT ALL ON proc_login TO GerenteArea;
+
 
 -- Gerente de Abarrotes
 CREATE USER GerenteAbarrottes IDENTIFIED BY GerenteArea;
@@ -391,8 +257,7 @@ grant select on Producto to GerenteGeneral;
 grant delete on Producto to GerenteGeneral;
 grant insert on Producto to GerenteGeneral;
 grant update on Producto to GerenteGeneral;
-grant select on rep_usuarios to GerenteGeneral;
-GRANT ALL ON proc_login TO GerenteGeneral;
+
 
 
 
@@ -424,74 +289,4 @@ CREATE USER AdminSistemas IDENTIFIED BY AdminSistemas;
 GRANT CONNECT TO AdminSistemas;  
 GRANT EncargadoSistemas TO AdminSistemas;
 INSERT INTO usuarios(USUARIOSID, NOMBREUSUARIO, CONTRASENIA, ROL) VALUES (sec_usuarios.nextval, 'AdminSistemas', 'AdminSistemas', 10);
-
-
--- Procedures, Functions & view de Tabla Usuarios
-
--- PUTusuatio
-create or replace procedure system.proc_insert_usuarios(NOMB in varchar, CONTRA in varchar, Rl in number, idUsuario out number) as
-begin
-  INSERT INTO usuarios(USUARIOSID, NOMBREUSUARIO, CONTRASENIA, ROL) VALUES (sec_usuarios.nextval, NOMB, CONTRA, Rl);
-  idUsuario := sec_usuarios.currval;
-  exception
-  when others then
-    idUsuario := -1;
-end proc_insert_usuarios;
-/
-
-
-
---Login
-create or replace procedure system.proc_login(usuario in varchar, passwrd in varchar, response out number ) AUTHID DEFINER as
-begin
-    select USUARIOSID into response
-    from usuarios 
-    where NombreUsuario = usuario and Contrasenia = passwrd;  
-exception
-  when others then
-    response := -1;
-end proc_login;
-
-select * from usuarios;
-
-
-
-
-
-
-
--- GETusuario
-create or replace view rep_usuarios as
-select * from usuarios;
-
-
-
-/*
-    UsuariosID number,
-    NombreUsuario varchar(150),
-    Contrasenia varchar(150),
-    Rol number, 
-*/
-
--- PUTusuario
-create or replace procedure system.proc_update_usuarios(idu in number ,nombre in varchar, contra in varchar, rl in number, response out number) as
-begin
-    update usuarios set NOMBREUSUARIO = nombre, CONTRASENIA=contra, ROL= rl where USUARIOSID = idu;
-    response := 1;
-exception
-  when others then
-    response := -1;
-end proc_update_usuarios;
-
--- DELETEusuario
-create or replace procedure system.proc_delete_usuarios(idu in number, response out number) as
-begin
-    delete from usuarios where usuariosid = idu;
-    response := 1;
-exception
-  when others then
-    response := -1;        
-end proc_delete_usuarios;
-
-
 
