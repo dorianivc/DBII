@@ -11,13 +11,25 @@ import java.sql.*;
 import java.util.ArrayList;
 
 public class DAO {
+
+
     final String URL = "jdbc:oracle:thin:@localhost:1521:xe";
-    final String USER = "system";
-    final String PASSWORD = "system";
+    String USER = "system";
+    String PASSWORD = "system";
+
+
+    public DAO(records.Usuario usuario) {
+        this.USER = usuario.NOMBREUSUARIO();
+        this.PASSWORD = usuario.CONTRASENIA();
+    }
+
+    public DAO(String USER, String PASSWORD) {
+        this.USER = USER;
+        this.PASSWORD = PASSWORD;
+    }
 
     Connection connection;
 
-    //logger object for saving logs
     private static final Logger logger = LogManager.getLogger();
 
     public void connect(){
@@ -46,41 +58,47 @@ public class DAO {
     }
 
 
-    public boolean POSTUsuario(records.Usuario usuario){
-        connect();
+
+    public int POSTUsuario(records.Usuario usuario){
         //sql statement for inserting record
         //delete, update, insert
-        String sql = "INSERT INTO usuarios (USUARIOSID, NOMBREUSUARIO, CONTRASENIA, ROL) VALUES (?, ?,?,?)";
+        //(NOMB in varchar, CONTRA in varchar, Rl in number, idUsuario out number)
+        String command = "{call SYSTEM.proc_insert_usuarios(?,?,?,?)}";
+        int result = -1;
         try {
-            PreparedStatement statement = connection.prepareStatement(sql);
-            //setting parameter values
-            statement.setString(1, usuario.USUARIOSID());
-            statement.setString(2, usuario.NOMBREUSUARIO());
-            statement.setString(3, usuario.CONTRASENIA());
-            statement.setString(4, usuario.ROL());
-            //executing query which will return an integer value
-            int rowsInserted = statement.executeUpdate();
-            //if rowInserted is greater then 0 mean rows are inserted
-            if (rowsInserted > 0) {
+            connect();
+            CallableStatement cstmt = connection.prepareCall(command);
+
+            cstmt.setString(1, usuario.NOMBREUSUARIO());     //orderId integer value to be set as input parameter
+            cstmt.setString(2, usuario.CONTRASENIA());     //orderId integer value to be set as input parameter
+            cstmt.setInt(3, Integer.parseInt(usuario.ROL()));     //orderId integer value to be set as input parameter
+            cstmt.registerOutParameter(4, Types.INTEGER);
+            cstmt.execute();
+            result = cstmt.getInt(4);
+            cstmt.close();
+
+            closeConnection();
+            if (result != -1) {
                 logger.debug("A new user was inserted successfully!");
-                return true;
+                return result;
+            }else{
+                logger.error("Exception in connection: Agregar usuario");
+                return result;
             }
         }catch (Exception e){
             logger.error("Exception in connection: "+ e.toString());
-            return false;
+            return -1;
         }
 
-        closeConnection();
-        return false;
     }
 
     public ArrayList<records.Usuario> GETUsuarios(){
-        connect();
         //sql statement for inserting record
-        String sql = "select * from usuarios";
+        String sql = "select * from system.rep_usuarios";
         //Creating a collection form employee list for storing all employee record
         ArrayList<records.Usuario> employeeList=new ArrayList<records.Usuario>();
         try {
+            connect();
             //creating and executing our statement
             Statement statement = connection.createStatement();
             ResultSet result = statement.executeQuery(sql);
@@ -102,74 +120,97 @@ public class DAO {
     public records.Usuario GETUsuario(records.Usuario usuario){
         ArrayList<records.Usuario> result = GETUsuarios();
         //filtra el primer usuario con x ID (FP)
-        return result.stream().filter(x -> x.USUARIOSID().equals(usuario.USUARIOSID()) ).findFirst().orElse(null);
+        return result.stream()
+                .filter(x -> x.USUARIOSID().equals(usuario.USUARIOSID()) )
+                .findFirst()
+                .orElse( new records.Usuario("", "", "", ""));
     }
 
-    public boolean PUTUsuarios(records.Usuario usuario){
-        connect();
-        //sql statement for inserting record
-        String sql = "update usuarios set NOMBREUSUARIO =?, CONTRASENIA=?, ROL=? where USUARIOSID=?";
-        //getting input from user
+    public records.Usuario PUTUsuarios(records.Usuario usuario){
+        //proc_update_usuarios(idu in number ,nombre in varchar, contra in varchar, rl in number, response out number)
+        String command = "{call SYSTEM.proc_update_usuarios(?,?,?,?,?)}";
+        int result;
 
         try {
-            //creating and executing our statement
-            PreparedStatement statement = connection.prepareStatement(sql);
-            //setting parameter values
-            statement.setString(1, usuario.NOMBREUSUARIO());
-            statement.setString(2, usuario.CONTRASENIA());
-            statement.setString(3, usuario.ROL());
-            statement.setString(4, usuario.USUARIOSID());
+            connect();
+            CallableStatement cstmt = connection.prepareCall(command);
 
-            int rowsUpdated = statement.executeUpdate();
-            //if rowInserted is greater then 0 mean rows are inserted
-            if (rowsUpdated > 0) {
-                logger.debug("An existing user was updated successfully!");
-                return true;
-            }
+            cstmt.setInt(1, Integer.parseInt(usuario.USUARIOSID()));     //orderId integer value to be set as input parameter
+            cstmt.setString(2, usuario.NOMBREUSUARIO());     //orderId integer value to be set as input parameter
+            cstmt.setString(3, usuario.CONTRASENIA());     //orderId integer value to be set as input parameter
+            cstmt.setInt(4, Integer.parseInt(usuario.ROL()));     //orderId integer value to be set as input parameter
+            cstmt.registerOutParameter(5, Types.INTEGER);
+            cstmt.execute();
+            result = cstmt.getInt(5);
+            cstmt.close();
+
+            closeConnection();
+            return this.GETUsuario(usuario);
+        }catch (Exception e){
+            logger.error("Exception in connection: "+ e.toString());
+            return new records.Usuario("-1","","","");
+
+        }
+    }
+
+    public boolean DELETEUsuario(records.Usuario usuario){
+        //sql statement for inserting record
+        //proc_delete_usuarios(idu in number, response out number)
+        String command = "{call SYSTEM.proc_delete_usuarios(?,?)}";
+        int result;
+
+        try {
+            connect();
+            CallableStatement cstmt = connection.prepareCall(command);
+
+            cstmt.setInt(1, Integer.parseInt(usuario.USUARIOSID()));     //orderId integer value to be set as input parameter
+            cstmt.registerOutParameter(2, Types.INTEGER);
+            cstmt.execute();
+
+            result = cstmt.getInt(2);
+            cstmt.close();
+
+            closeConnection();
+            return result == 1;
         }catch (Exception e){
             logger.error("Exception in connection: "+ e.toString());
             return false;
 
         }
-        closeConnection();
-        return false;
-    }
-
-    public boolean DELETEUsuario(records.Usuario usuario){
-        connect();
-        //sql statement for inserting record
-        String sql = "DELETE FROM  usuarios WHERE USUARIOSID=?";
-
-        try {
-            //creating and executing our statement
-            PreparedStatement statement = connection.prepareStatement(sql);
-            //setting parameter values
-            statement.setString(1, usuario.USUARIOSID());
-
-            int rowsDeleted = statement.executeUpdate();
-            //if rowInserted is greater then 0 mean rows are inserted
-            if (rowsDeleted > 0) {
-                logger.debug("Employee was deleted successfully!");
-                return true;
-            }else {
-                logger.debug("Employee not found");
-                return false;
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        closeConnection();
-        return false;
     }
 
 
-    public boolean login(records.Usuario usuario){
+    public records.Usuario login(records.Usuario usuario){
+        //usuario in varchar, passwrd in varchar, response out number
         try{
-            return GETUsuario(usuario).CONTRASENIA().equals(usuario.CONTRASENIA());
+            connect();
+            String command = "{call system.proc_login(?,?,?)}";
+            int result = -1;
 
-        }catch (NullPointerException e){
+            CallableStatement cstmt = connection.prepareCall(command);
+
+            cstmt.setString(1, usuario.NOMBREUSUARIO());     //orderId integer value to be set as input parameter
+            cstmt.setString(2, usuario.CONTRASENIA());     //orderId integer value to be set as input parameter
+            cstmt.registerOutParameter(3, Types.INTEGER);
+            cstmt.execute();
+            result = cstmt.getInt(3);
+            System.out.println(result);
+            cstmt.close();
+
+            closeConnection();
+            if (result != -1) {
+                logger.debug("user n pwd correct");
+                return this.GETUsuario(new records.Usuario(String.valueOf(result), "", "",""));
+            }else{
+                logger.error("Exception in connection: no se encontró");
+                return new records.Usuario("-1", "", "", "" );
+            }
+
+
+        }catch (NullPointerException | SQLException e){
             System.out.println(e);
-            return false;
+            closeConnection();
+            return new records.Usuario("-1", "", "", "" );
         }
     }
 
