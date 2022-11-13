@@ -17,6 +17,9 @@ drop sequence sec_usuarios;
 drop sequence sec_bitacora;
 drop sequence sec_bitacora_cajero;
 drop sequence sec_bitacora_factura;
+drop sequence sec_facturas;
+drop sequence sec_detalles;
+
 
 DROP USER Cajero1;
 DROP USER Cajero2;
@@ -43,7 +46,8 @@ create sequence sec_bitacora start with 1;
 create sequence sec_bitacora_cajero start with 1;
 create sequence sec_bitacora_factura start with 1;
 create sequence sec_usuarios start with 1;
-
+create sequence sec_facturas start with 1;
+create sequence sec_detalles start with 1;
 
 
 --Manejamos los roles como un int
@@ -62,7 +66,7 @@ create table Usuarios (
         1 ->  Gerente General
         2 ->  Gerente abarrotes
         3 ->  Gerente cuidado personal
-        4 ->  Gerente mercancías
+        4 ->  Gerente mercancï¿½as
         5 ->  Gerente frescos
         6 ->  Gerente frescos
         7 ->  Cajero    
@@ -95,10 +99,8 @@ create table Factura (
     CONSTRAINT check_numero_caja
     CHECK (NumeroCaja BETWEEN 1 and 3)
 );
---TODO: ck cajero id debe ser de tipo cajero
---TODO: trigger que actualiza el total del la factura
-
-
+--TODO: ck cajero id debe ser de tipo cajero LISTO
+--TODO: trigger que actualiza el total del la factura ????
 
 create  table Producto(
     EAN number, --id (13 caracteres)
@@ -176,17 +178,107 @@ create Table BitacoraFactura(
     Fecha timestamp,
     primary key(BitacoraFacturaId)
 );
+--***************************************************************************
+-- Triggers
+-- Trigger detalle
+create or replace trigger detalle_before_insert
+before insert on Detalle
+for each row
+declare
+    v_cajeroID number;
+begin
+    select CajeroID into v_cajeroID from Factura where FacturaID = :new.FacturaID;
+    if(v_cajeroID is null) 
+    then RAISE_APPLICATION_ERROR( -20001, 'La factura no existe');
+    end if;
+end;
+/
 
+-- Trigger Factura
+create or replace trigger factura_before_insert
+before insert on Factura
+for each row
+declare
+    v_usuario_rol number;
+begin
+    select Rol into v_usuario_rol from Usuarios where UsuariosID = :new.CajeroID;
+    if (v_usuario_rol <> 7 )
+    then RAISE_APPLICATION_ERROR( -20001, 'El usuario insertado no es un cajero');
+    end if;
+end;
+/
+-- 
+create or replace trigger area_before_insert
+before insert on Area
+for each row
+declare
+    v_usuario_rol number;
+begin
+    select Rol into v_usuario_rol from Usuarios where UsuariosID = :new.GerenteID;
+    if (v_usuario_rol > 6)
+    then RAISE_APPLICATION_ERROR( -20001, 'El usuario insertado no es gerente');
+    end if;
+end;
+/
+-- Procedures 
+-- insertar usuario
+create or replace procedure proc_insertar_usuario ( 
+                            p_NombreUsuario in Usuarios.NombreUsuario%type,
+                            p_Contrasenia in Usuarios.Contrasenia%type,
+                            p_Rol in Usuarios.Rol%type)
+is 
+begin
+    insert into Usuarios values (sec_usuarios.nextval, p_NombreUsuario,p_Contrasenia, p_Rol);
+    commit;
+end;
+/
 
+-- insertar factura
+create or replace procedure proc_insertar_factura(
+                            p_CajeroID in Factura.CajeroID%type,
+                            p_NumeroCaja in Factura.NumeroCaja%type)
+is 
+begin
+    insert into Factura values (sec_facturas.nextval, p_CajeroID, p_NumeroCaja, 0, sysdate);
+    commit;
+end;
+/
 
+-- insertar detalle
+
+create or replace procedure proc_insertar_detalle(
+                            p_ProductoID in Detalle.ProductoID%type,
+                            p_Cantidad in Detalle.Cantidad%type,
+                            p_FacturaID in Detalle.FacturaID%type)
+is
+    v_totalFactura decimal(2,0); -- Lo que la factura ya trae. Empieza en 0
+    v_precioProducto decimal(2,0); -- Lo que cuesta cada uno de los productos
+    v_productoTotal decimal(2,0); -- Precio del producto * cantidad del producto
+    v_totalFinal decimal(2,0); -- ProductoTotal + totalFactura
+begin
+    select Total 
+    into v_totalFactura 
+    from Factura 
+    where FacturaID = p_FacturaID; 
+    
+    select Precio
+    into v_precioProducto
+    from Producto
+    where EAN = p_ProductoID;
+    
+    v_productoTotal := v_precioProducto * p_Cantidad;
+    
+    v_totalFinal := v_totalFactura + v_productoTotal;
+    
+    insert into Detalle values (sec_Detalles.nextval, p_ProductoID, p_Cantidad, v_productoTotal, p_FacturaID);
+    update Factura f set f.Total = v_totalFinal where f.FacturaID = p_FacturaID;
+end;
+/
 ---------------------------------------------------------------------------
 
 --roles
 -- ROL CAJERO
 -- Solo pueden realizar ventas y consultar precios de productos
-
-
-
 create role Cajero;
 grant select on Producto to Cajero;
 
@@ -207,9 +299,6 @@ GRANT Cajero TO Cajero3;
 INSERT INTO usuarios(USUARIOSID, NOMBREUSUARIO, CONTRASENIA, ROL) VALUES (sec_usuarios.nextval, 'Cajero1', 'Cajero', 7);
 INSERT INTO usuarios(USUARIOSID, NOMBREUSUARIO, CONTRASENIA, ROL) VALUES (sec_usuarios.nextval, 'Cajero2', 'Cajero', 7);
 INSERT INTO usuarios(USUARIOSID, NOMBREUSUARIO, CONTRASENIA, ROL) VALUES (sec_usuarios.nextval, 'Cajero3', 'Cajero', 7);
-
-
-
 
 -- ROL GERENTE DE AREA
 -- Pueden hacer update a los productos del area bajo su cargo
