@@ -48,7 +48,7 @@ create sequence sec_detalles start with 1;
 --Manejamos los roles como un int
 create table Usuarios (
     UsuariosID number,
-    NombreUsuario varchar(150),
+    NombreUsuario varchar(150) unique,
     Contrasenia varchar(150),
     Rol number, 
     primary key (UsuariosID),
@@ -63,7 +63,6 @@ create table Usuarios (
         3 ->  Gerente cuidado personal
         4 ->  Gerente mercanc�as
         5 ->  Gerente frescos
-        6 ->  Gerente frescos
         7 ->  Cajero    
         10 -> admin de sistemas
     */
@@ -284,6 +283,8 @@ CREATE USER Cajero3 IDENTIFIED BY Cajero;
 GRANT CONNECT TO Cajero1; 
 GRANT CONNECT TO Cajero2; 
 GRANT CONNECT TO Cajero3; 
+
+select * from bitacora;
 
 GRANT Cajero TO Cajero1;
 GRANT Cajero TO Cajero2;

@@ -23,10 +23,10 @@
             </div>
 
             <!-- Login Form -->
-            <form>
-                <input type="text" id="login" class="fadeIn second" name="login" placeholder="Nombre de usuario">
-                <input type="text" id="password" class="fadeIn third" name="login" placeholder="Contraseña">
-                <input type="button" class="fadeIn fourth btn-ingresar" value="Ingresar">
+            <form >
+                <input type="text" id="login" class="fadeIn second" name="login" placeholder="Nombre de usuario" required>
+                <input type="text" id="password" class="fadeIn third" name="login" placeholder="Contraseña" required>
+                <input type="submit" class="fadeIn fourth btn-ingresar" id="button-submit" value="Ingresar">
             </form>
 
             <!-- Remind Passowrd -->
@@ -37,6 +37,8 @@
 
         </div>
     </div>
+
+    <script src="./js/login.js"></script>
 </body>
 
 </html>
