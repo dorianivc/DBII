@@ -17,7 +17,6 @@ public class ControllerUsuario {
     @PostMapping("/login")
     public records.Usuario login(@RequestBody records.Usuario person){
         dao = new DAO(person);
-        //dao = new DAO("system", "system");
         return dao.login(person);
     }
 
@@ -41,7 +40,8 @@ public class ControllerUsuario {
 
     @PutMapping
     public records.Usuario PUTUsuario(@RequestBody records.Usuario usuario){
-        dao = new DAO(System);
+        //dao = new DAO(System);
+        dao = new DAO(usuario);
         return dao.PUTUsuarios(usuario);
     }
 
