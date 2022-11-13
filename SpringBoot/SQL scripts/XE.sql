@@ -14,7 +14,6 @@ drop table Bitacora;
 
 -- TODOOOOOOOOOOOOOOOOOOOOOOO
 drop sequence sec_usuarios;
-drop sequence sec_bitacora;
 drop sequence sec_bitacora_cajero;
 drop sequence sec_bitacora_factura;
 drop sequence sec_facturas;
@@ -40,10 +39,6 @@ drop role EncargadoSistemas;
 
 
 
-
-
-
-create sequence sec_bitacora start with 1;
 create sequence sec_bitacora_cajero start with 1;
 create sequence sec_bitacora_factura start with 1;
 create sequence sec_usuarios start with 1;
@@ -105,7 +100,7 @@ create table Factura (
 --TODO: ck cajero id debe ser de tipo cajero LISTO
 --TODO: trigger que actualiza el total del la factura ????
 
-create  table Producto(
+create table Producto(
     EAN number, --id (13 caracteres)
     PLU number, --id (5 digitos) para frescos
     Descripcion varchar(150),
@@ -159,7 +154,7 @@ create Table Bitacora(
 
 
 create Table BitacoraCajero(
-  BitacoraCajeroId number,
+  BitacoraCajeroId number GENERATED ALWAYS as IDENTITY(START with 1 INCREMENT by 1),
   Usuario varchar(100),
   NumeroCaja number,
   NumeroFactura number, 
@@ -169,7 +164,7 @@ create Table BitacoraCajero(
 );
 
 create Table BitacoraFactura(
-    BitacoraFacturaId number,
+    BitacoraFacturaId number GENERATED ALWAYS as IDENTITY(START with 1 INCREMENT by 1),
     FacturaID number,
     ProductoID number,
     Cantidad decimal(2,0),
@@ -611,7 +606,6 @@ CREATE USER Cajero1 IDENTIFIED BY Cajero;
 CREATE USER Cajero2 IDENTIFIED BY Cajero;
 CREATE USER Cajero3 IDENTIFIED BY Cajero;
 
-
 GRANT CONNECT TO Cajero1; 
 GRANT CONNECT TO Cajero2; 
 GRANT CONNECT TO Cajero3; 
@@ -639,6 +633,7 @@ CREATE USER GerenteAbarrottes IDENTIFIED BY GerenteArea;
 GRANT CONNECT TO GerenteAbarrottes;  
 GRANT GerenteArea TO GerenteAbarrottes;
 INSERT INTO usuarios(USUARIOSID, NOMBREUSUARIO, CONTRASENIA, ROL) VALUES (sec_usuarios.nextval, 'GerenteAbarrottes', 'GerenteArea', 2);
+
 
 
 
